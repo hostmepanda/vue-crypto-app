@@ -163,6 +163,20 @@
 export default {
   name: 'CryptoApp',
   async created() {
+    const watchedTickersJson = localStorage.getItem('crypto-app');
+    try {
+      const watchedTickers = JSON.parse(watchedTickersJson);
+      this.watchedTickers = watchedTickers ?? [];
+      return Promise.all(
+          watchedTickers.map(
+              async ({ ticker }) => this.startPriceWatching(ticker),
+          ),
+      );
+    } catch {
+      this.watchedTickers = [];
+    }
+  },
+  async mounted() {
     const allCoinsFetch = await fetch(
         `https://min-api.cryptocompare.com/data/all/coinlist?api_key=${this.app.settings.cryptoApiKey}`
     );
@@ -191,7 +205,7 @@ export default {
   }),
   computed: {
     hasWatchedTickers() {
-      return this.watchedTickers.length > 0;
+      return this?.watchedTickers?.length > 0;
     },
     hasSuggests() {
       if (this?.allTickers && this?.enteredTicker) {
@@ -227,6 +241,8 @@ export default {
         ticker: enteredTicker,
         price: tickerPrice,
       });
+      localStorage.setItem('crypto-app', JSON.stringify(this.watchedTickers));
+
       this.enteredTicker = undefined;
       await this.startPriceWatching(enteredTicker);
     },
@@ -246,7 +262,7 @@ export default {
       return tickerUsdtPrice ?? '-';
     },
     isTickerAlreadyAdded() {
-      return this.watchedTickers.find(
+      return this.watchedTickers?.find(
           ({ ticker: findTicker }) => findTicker === this.enteredTicker,
       );
     },
@@ -272,9 +288,10 @@ export default {
       Reflect.deleteProperty(this.watchedPrices, ticker);
       Reflect.deleteProperty(this.watchedPricesGraph, ticker);
       this.selectedWatchedTicker = undefined;
-      return this.watchedTickers = this.watchedTickers.filter(
+      this.watchedTickers = this.watchedTickers.filter(
           ({ ticker: filterTicker }) => ticker !== filterTicker,
       );
+      localStorage.setItem('crypto-app', JSON.stringify(this.watchedTickers));
     },
     async updateWatchedTickerPrice(ticker) {
       const tickerPrice = await this.fetchTickerPrice(ticker);
