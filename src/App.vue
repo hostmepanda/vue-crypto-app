@@ -29,22 +29,13 @@
             </div>
             <template v-if="hasSuggests">
               <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
-            <span
-                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BTC
-            </span>
                 <span
+                    v-for="({ Name }) in hasSuggests"
+                    :key="Name"
+                    @click="this.enteredTicker = Name; addWatchedTicker()"
                     class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              DOGE
-            </span>
-                <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              BCH
-            </span>
-                <span
-                    class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
-              CHD
-            </span>
+                  {{ Name }}
+                </span>
               </div>
             </template>
 
@@ -171,7 +162,15 @@
 <script>
 export default {
   name: 'CryptoApp',
+  async created() {
+    const allCoinsFetch = await fetch(
+        `https://min-api.cryptocompare.com/data/all/coinlist?api_key=${this.app.settings.cryptoApiKey}`
+    );
+    ({ Data: this.allTickers } = await allCoinsFetch.json());
+    return undefined;
+  },
   data: () => ({
+    allTickers: undefined,
     app: {
       // TODO: should we extract this to environment variable?
       priceWatchIntervalSeconds: 5 * 1000,
@@ -195,6 +194,19 @@ export default {
       return this.watchedTickers.length > 0;
     },
     hasSuggests() {
+      if (this?.allTickers && this?.enteredTicker) {
+        const foundSuggests = Object.values(this.allTickers).filter(
+            ({ Name }) => Name?.includes(this.enteredTicker.toUpperCase()),
+        );
+
+        const firstFourSuggests = foundSuggests.length > 4
+            ? foundSuggests.slice(0, 4)
+            : foundSuggests;
+
+        return firstFourSuggests.length > 0
+            ? firstFourSuggests
+            : false;
+      }
       return false;
     },
   },
